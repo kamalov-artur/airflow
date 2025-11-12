@@ -20,7 +20,7 @@ def ping_site():
 with DAG(
     dag_id="alpha_beta_keepalive",
     start_date=datetime(2025, 11, 1),
-    schedule="0 * * * *",
+    schedule="30 * * * *",
     catchup=False,
     max_active_runs=1,
     default_args=dict(retries=3),
