@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U airflow -d airflow"]
+      interval: 5s
+      retries: 10
+
+  airflow-init:
+    image: apache/airflow:2.10.2
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_WWW_USER_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_WWW_USER_PASSWORD:-airflow}
+    user: "${AIRFLOW_UID:-50000}:0"
+    command: ["bash","-lc","airflow db migrate && airflow users create -r Admin -u $_AIRFLOW_WWW_USER_USERNAME -p $_AIRFLOW_WWW_USER_PASSWORD -e admin@example.com -f Admin -l User || true"]
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+
+  airflow-webserver:
+    image: apache/airflow:2.10.2
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    user: "${AIRFLOW_UID:-50000}:0"
+    ports: ["8080:8080"]
+    command: webserver
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    healthcheck:
+      test: ["CMD","curl","-f","http://localhost:8080/health"]
+      interval: 10s
+      retries: 10
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.2
+    depends_on: { airflow-webserver: { condition: service_started } }
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    user: "${AIRFLOW_UID:-50000}:0"
+    command: scheduler
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+
+volumes:
+  pgdata:
