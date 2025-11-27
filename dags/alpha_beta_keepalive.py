@@ -27,9 +27,7 @@ with DAG(
     tags=["render"],
 ) as dag:
 
-    dag.doc_md = """
-    Пингует `URL` раз в час, падает при ошибке`4xx/5xx`.  
-    """
+    dag.doc_md = __doc__
 
     PythonOperator(
         task_id="ping",
