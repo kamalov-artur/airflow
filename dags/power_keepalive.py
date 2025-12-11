@@ -1,6 +1,6 @@
 """
 Обращение к сайту на streamlit для пинга для поддержания его работоспособности
-Запуск каждые 2 часа
+Запуск каждые 10 минут
 """
 
 import requests
@@ -20,7 +20,7 @@ def ping_site():
 with DAG(
     dag_id="power_keepalive",
     start_date=datetime(2025, 11, 1),
-    schedule="0 */2 * * *",
+    schedule="*/10 * * * *",
     catchup=False,
     max_active_runs=1,
     default_args=dict(retries=3),
